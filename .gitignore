@@ -1,0 +1,6 @@
+PharoDebug.log
+ST80.temp
+*.changes
+*.image
+files/*
+package-cache/*
