@@ -1,6 +1,6 @@
 SMR = {
   reservations: function() {
-    return SMR.Store.reservations
+    return _.sortBy(SMR.Store.reservations, function(r) { return r.startTime() })
   },
   listReservations: function() {
     SMR.Store.loadReservations( SMR.MainView.renderReservations )
