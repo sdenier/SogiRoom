@@ -1,5 +1,5 @@
 
 !SGLReservation methodsFor: 'accessing'!
-dateAndTime
+startTime
 
 	^ DateAndTime date: self date time: self time! !
