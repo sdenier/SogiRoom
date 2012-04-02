@@ -3,7 +3,7 @@
 bookingJs
 	^ 'SMR = {
   reservations: function() {
-    return SMR.Store.reservations
+    return _.sortBy(SMR.Store.reservations, function(r) { return r.startTime() })
   },
   listReservations: function() {
     SMR.Store.loadReservations( SMR.MainView.renderReservations )
@@ -59,8 +59,9 @@ SMR.Store = {
   createReservation: function(reservation, done) {
     $.post(''booking-api'',
         JSON.stringify(reservation),
-        function(guid) {
-          reservation.guid = parseInt(guid)
+        function(jsonSig) {
+          reservation.guid = jsonSig.guid
+          reservation.timestamp = jsonSig.timestamp
           this.reservations.push(reservation)
           done()
         }.bind(this),
@@ -70,20 +71,22 @@ SMR.Store = {
     $.ajax({type: ''PUT'',
         url: ''booking-api/'' + reservation.id(),
         data: JSON.stringify(reservation),
-        complete: function(data, status) {
+        success: function(jsonSig, status) {
+          reservation.timestamp = jsonSig.timestamp
           next()
         },
         dataType: ''json'' })
   },
   deleteReservation: function(reservation, next) {
     $.ajax({type: ''DELETE'',
-        url: ''booking-api/'' + reservation.id(),
-        complete: function(data, status) {
+        url: ''booking-api/'' + reservation.id() + ''/'' + reservation.timestamp,
+        success: function(jsonSig, status) {
+          reservation.timestamp = jsonSig.timestamp
           var i = this.reservations.indexOf(reservation)
           this.reservations.splice(i, 1)
           next()
         }.bind(this),
-        dataType: ''json'' }).done(function() {console.log(''done'')})
+        dataType: ''json'' })
   },
   _newReservationFromJson: function(json) {
     return new SMR.Reservation().fromJSON(json)
@@ -112,6 +115,7 @@ $.extend(SMR.Reservation.prototype, {
     this.guid = json.guid
     this.datetime = new Date(json.datetime)
     this.duration = json.duration
+    this.timestamp = json.timestamp
     return this
   },
   id: function() {

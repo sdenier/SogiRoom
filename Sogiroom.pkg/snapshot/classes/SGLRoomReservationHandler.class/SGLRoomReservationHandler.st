@@ -1,6 +1,6 @@
 
 WARestfulHandler subclass: #SGLRoomReservationHandler
 	instanceVariableNames: ''
-	classVariableNames: ''
+	classVariableNames: 'Timestamp TsMutex'
 	poolDictionaries: ''
 	category: 'SogiRoom-App'!

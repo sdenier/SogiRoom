@@ -10,4 +10,5 @@ create
 	dateTime := (DateAndTime fromString: (json at: 'datetime')) withoutOffset asLocal.
 	newResa := SGLRoom default addReservation:
 		(SGLReservation forDate: dateTime asDate at: dateTime asTime for: (json at: 'duration') milliSeconds).
-	^ newResa guid asString! !
+	newResa timestamp: self nextTimestamp.
+	^ newResa signature asJavascript ! !

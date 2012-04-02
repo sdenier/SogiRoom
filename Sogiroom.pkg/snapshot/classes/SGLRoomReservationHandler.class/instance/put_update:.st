@@ -11,5 +11,6 @@ put_update: id
 	dateTime := (DateAndTime fromString: (json at: 'datetime')) withoutOffset asLocal.
 	resa date: dateTime asDate ;
 		  time: dateTime asTime ;
-		  duration: (json at: 'duration') milliSeconds.
-	^ 'Updated'! !
+		  duration: (json at: 'duration') milliSeconds;
+		  timestamp: self nextTimestamp.
+	^ resa signature asJavascript! !
