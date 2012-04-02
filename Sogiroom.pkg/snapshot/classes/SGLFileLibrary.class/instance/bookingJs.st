@@ -13,13 +13,11 @@ bookingJs
       SMR.MainView.renderReservation(id) })
   },
   saveReservation: function(reservation) {
-    try {
-      SMR.Store.saveReservation(reservation, SMR.MainView.renderReservations)
-      return true
-    } catch(ex) {
-      SMR.MainView.showException(ex)
-      return false
-    }
+    SMR.Store.saveReservation(reservation,
+      function(){
+        SMR.MainView.hideDetail()
+        SMR.MainView.renderReservations()},
+      SMR.MainView.showException)
   },
   deleteReservation: function(reservation) {
     $(''#js-reservation-detail'').empty()
@@ -46,26 +44,32 @@ SMR.Store = {
         done(reservation)
       }.bind(this))
   },
-  saveReservation: function(reservation, done) {
+  saveReservation: function(reservation, afterSuccess, afterError) {
     if( reservation.conflict() ){
-      throw "Conflict"
+      afterError(''Conflict'')
+      return
     }
     if( reservation.isNew() ){
-      this.createReservation(reservation, done)
+      this.createReservation(reservation, afterSuccess, afterError)
     } else {
-      this.updateReservation(reservation, done)
+      this.updateReservation(reservation, afterSuccess)
     }
   },
-  createReservation: function(reservation, done) {
+  createReservation: function(reservation, afterSuccess, afterError) {
     $.post(''booking-api'',
-        JSON.stringify(reservation),
-        function(jsonSig) {
-          reservation.guid = jsonSig.guid
-          reservation.timestamp = jsonSig.timestamp
-          this.reservations.push(reservation)
-          done()
-        }.bind(this),
-        ''json'')
+            JSON.stringify(reservation),
+            ''json'')
+      .success(function(jsonSig) {
+              reservation.guid = jsonSig.guid
+              reservation.timestamp = jsonSig.timestamp
+              this.reservations.push(reservation)
+              afterSuccess()
+            }.bind(this))
+      .error(function(jqXHR, status, error) {
+        var exception = JSON.parse(jqXHR.responseText)
+        afterError(exception.conflict)
+      })
+
   },
   updateReservation: function(reservation, next) {
     $.ajax({type: ''PUT'',
@@ -180,7 +184,7 @@ SMR.MainView = {
       SMR.EditView.editReservation(new SMR.Reservation())
     })
     $(''#js-reservations'').append(newLink).append('' '')
-    
+
     var refreshLink = $(''<a href="#">Refresh</a>'').click( SMR.listReservations )
     $(''#js-reservations'').append(refreshLink)
   },
@@ -188,6 +192,9 @@ SMR.MainView = {
     var resa_dom = $(''<p>'')
     resa_dom.html(reservation.render())
     $(''#js-reservation-detail'').empty().append(resa_dom)
+  },
+  hideDetail: function() {
+    $(''#js-reservation-detail'').empty()
   },
   showException: function(exception) {
     $(''#js-flash'').html(exception)
@@ -207,9 +214,7 @@ SMR.EditView = {
         $(''#js-flash'').empty()
         reservation.datetime = Date.parse(dateField.val() + '' '' + timeField.val())
         reservation.duration = durationField.val() * 60000
-        if( SMR.saveReservation(reservation) ){
-          $(''#js-reservation-detail'').empty()
-        }
+        SMR.saveReservation(reservation)
     })
   },
 }
