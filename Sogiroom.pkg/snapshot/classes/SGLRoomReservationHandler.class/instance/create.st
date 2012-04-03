@@ -5,20 +5,22 @@ create
 	<produces: 'text/json'>
 	<consumes: '*/*'>
 
-	| json newResa dateTime |
+	| json dateTime duration |
 	json := self parseJsonBody.
 	dateTime := (DateAndTime fromString: (json at: 'datetime')) withoutOffset asLocal.
-	newResa := SGLReservation
-					forDate: dateTime asDate
-					at: dateTime asTime
-					for: (json at: 'duration') milliSeconds.
-	newResa conflicts ifNotEmptyDo: [ :conflicts | | doc |
-		doc := Dictionary newFromPairs: #(conflict Overlap).
-		doc add: #resources -> (conflicts collect: #signature).
+	duration := (json at: 'duration') milliSeconds.
+	
+	[ | newResa |	
+		newResa := SGLReservationService default createReservationAt: dateTime for: duration.
+		^ newResa signature asJavascript ]
+
+	on: SGLConflict
+	do: [ :conflict | | doc |
+		doc := Dictionary new
+				add: #conflict -> conflict type ;
+				add: #resources -> conflict resources ;
+				yourself.
 		self requestContext respond: [ :response |
-			response document: doc asJavascript mimeType: (WAMimeType fromString: 'text/json').
-			response status: WAResponse statusConflict. ]
-		].
-	SGLRoom default addReservation: newResa.
-	newResa timestamp: self nextTimestamp.
-	^ newResa signature asJavascript ! !
+			response 	document: doc asJavascript
+						mimeType: (WAMimeType fromString: 'text/json').
+			response status: WAResponse statusConflict. ]]! !

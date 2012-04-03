@@ -1,6 +1,6 @@
 
 Object subclass: #SGLReservationService
 	instanceVariableNames: ''
-	classVariableNames: 'Timestamp TsMutex'
+	classVariableNames: 'Default Timestamp TsMutex'
 	poolDictionaries: ''
 	category: 'SogiRoom-Services'!
