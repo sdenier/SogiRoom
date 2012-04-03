@@ -2,4 +2,4 @@
 !SGLReservation methodsFor: 'testing'!
 conflicts
 
-	^ SGLRoom default reservations select: [ :resa | self ~= resa and: [ self overlaps: resa ]]! !
+	^ SGLRoom default reservations select: [ :resa | self guid ~= resa guid and: [ self overlaps: resa ]]! !

@@ -5,12 +5,13 @@ put_update: id
 	<produces: 'text/json'>
 	<consumes: '*/*'>
 
-	| json resa dateTime |
+	| json dateTime duration resa |
 	json := self parseJsonBody.
-	resa := SGLRoom default findReservation: id asInteger.
 	dateTime := (DateAndTime fromString: (json at: 'datetime')) withoutOffset asLocal.
-	resa date: dateTime asDate ;
-		  time: dateTime asTime ;
-		  duration: (json at: 'duration') milliSeconds;
-		  timestamp: self nextTimestamp.
-	^ resa signature asJavascript! !
+	duration := (json at: 'duration') milliSeconds.
+
+	[	resa := SGLReservationService default updateReservation: id asInteger at: dateTime for: duration.
+		^ resa signature asJavascript ]
+	
+	on: SGLConflict
+	do: [ :conflict | self handleConflict: conflict ]! !

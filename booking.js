@@ -49,7 +49,7 @@ SMR.Store = {
     if( reservation.isNew() ){
       this.createReservation(reservation, afterSuccess, afterError)
     } else {
-      this.updateReservation(reservation, afterSuccess)
+      this.updateReservation(reservation, afterSuccess, afterError)
     }
   },
   createReservation: function(reservation, afterSuccess, afterError) {
@@ -57,27 +57,30 @@ SMR.Store = {
             JSON.stringify(reservation),
             'json')
       .success(function(jsonSig) {
-              reservation.guid = jsonSig.guid
-              reservation.timestamp = jsonSig.timestamp
-              this.reservations.push(reservation)
-              afterSuccess()
-            }.bind(this))
+            reservation.guid = jsonSig.guid
+            reservation.timestamp = jsonSig.timestamp
+            this.reservations.push(reservation)
+            afterSuccess()
+      }.bind(this))
       .error(function(jqXHR, status, error) {
-        var exception = JSON.parse(jqXHR.responseText)
-        afterError(exception.conflict)
+            var exception = JSON.parse(jqXHR.responseText)
+            afterError(exception.conflict)
       })
-
   },
-  updateReservation: function(reservation, next) {
+  updateReservation: function(reservation, next, afterError) {
     $.ajax({type: 'PUT',
-        url: 'booking-api/' + reservation.id(),
-        data: JSON.stringify(reservation),
-        dataType: 'json' })
-        .success(function(jsonSig, status) {
-          reservation.timestamp = jsonSig.timestamp
-          _.extend(this._findReservation(reservation.id()), reservation)
-          next()
-        }.bind(this))
+            url: 'booking-api/' + reservation.id(),
+            data: JSON.stringify(reservation),
+            dataType: 'json' })
+      .success(function(jsonSig, status) {
+            reservation.timestamp = jsonSig.timestamp
+            _.extend(this._findReservation(reservation.id()), reservation)
+            next()
+      }.bind(this))
+      .error(function(jqXHR, status, error) {
+            var exception = JSON.parse(jqXHR.responseText)
+            afterError(exception.conflict)
+      })
   },
   deleteReservation: function(reservation, next) {
     $.ajax({type: 'DELETE',

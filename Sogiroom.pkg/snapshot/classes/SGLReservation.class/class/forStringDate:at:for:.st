@@ -1,7 +1,8 @@
 
 !SGLReservation class methodsFor: 'initialize-release'!
 forStringDate: aDateString at: aTimeString for: aDurationString 
-	^ self new
+	^ self basicNew
+			initializeWith: self nextId ;
 			date: aDateString;
 			time: aTimeString;
 			duration: aDurationString;
