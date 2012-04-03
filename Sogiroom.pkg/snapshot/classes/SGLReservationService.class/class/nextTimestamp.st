@@ -1,5 +1,5 @@
 
-!SGLRoomReservationHandler class methodsFor: 'timestamp'!
+!SGLReservationService class methodsFor: 'timestamp'!
 nextTimestamp
 
 	^ TsMutex critical: [ Timestamp := Timestamp + 1 ]! !
