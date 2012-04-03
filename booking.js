@@ -72,22 +72,23 @@ SMR.Store = {
     $.ajax({type: 'PUT',
         url: 'booking-api/' + reservation.id(),
         data: JSON.stringify(reservation),
-        success: function(jsonSig, status) {
-          reservation.timestamp = jsonSig.timestamp
-          next()
-        },
         dataType: 'json' })
+        .success(function(jsonSig, status) {
+          reservation.timestamp = jsonSig.timestamp
+          _.extend(this._findReservation(reservation.id()), reservation)
+          next()
+        }.bind(this))
   },
   deleteReservation: function(reservation, next) {
     $.ajax({type: 'DELETE',
         url: 'booking-api/' + reservation.id() + '/' + reservation.timestamp,
-        success: function(jsonSig, status) {
+        dataType: 'json' })
+        .success(function(jsonSig, status) {
           reservation.timestamp = jsonSig.timestamp
           var i = this.reservations.indexOf(reservation)
           this.reservations.splice(i, 1)
           next()
-        }.bind(this),
-        dataType: 'json' })
+        }.bind(this))
   },
   _newReservationFromJson: function(json) {
     return new SMR.Reservation().fromJSON(json)
@@ -136,7 +137,7 @@ $.extend(SMR.Reservation.prototype, {
   },
   conflict: function() {
     return _.any(SMR.Store.reservations, function(resa) {
-      return this !== resa && this.overlaps(resa)
+      return this.id() != resa.id() && this.overlaps(resa)
     }.bind(this))
   },
   renderDate: function() {
@@ -167,7 +168,7 @@ SMR.MainView = {
       li.append(link).append(' ' + resa.renderTime(resa.startTime()) + ' - ' + resa.renderTime(resa.endTime()))
 
       var editLink = $('<a href="#">edit</a>').click(function() {
-        SMR.EditView.editReservation(resa)
+        SMR.EditView.editReservation(_.clone(resa))
       })
       var deleteLink = $('<a href="#">delete</a>').click(function() {
         SMR.deleteReservation(resa)
