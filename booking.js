@@ -106,6 +106,7 @@ SMR.Store = {
   _mergeReservation: function(resa) {
     return this._findReservation(resa.id(), function() {
       this.reservations.push(resa)
+      return resa
     }.bind(this))
   },
 }
