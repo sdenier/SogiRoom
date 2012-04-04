@@ -5,16 +5,18 @@ SMR = {
   listReservations: function() {
     SMR.Store.loadReservations( SMR.MainView.renderReservations )
   },
-  getReservation: function(id) {
-    SMR.Store.fetchReservation(id, function(id) {
-      SMR.MainView.renderReservation(id) })
-  },
   saveReservation: function(reservation) {
     SMR.Store.saveReservation(reservation,
       function(){
         SMR.MainView.hideDetail()
         SMR.MainView.renderReservations()},
-      SMR.MainView.showException)
+      function(type, resources){
+        if( type == 'Overlap' ){
+          SMR.MainView.mergeOverlapConflict(type, reservation, resources)
+        } else {
+          SMR.MainView.mergeEditConflict(type, reservation, resources)
+        }
+      })
   },
   deleteReservation: function(reservation) {
     $('#js-reservation-detail').empty()
@@ -25,21 +27,29 @@ SMR = {
 SMR.Store = {
   reservations: [],
   loadReservations: function(done) {
+    this.reservations = []
     var self = this
     $.getJSON('booking-api')
       .success(function(data, status) {
         _.each(data, function(json) {
-          self._mergeReservation( self._newReservationFromJson(json) )
+          self.reservations.push( self._newReservationFromJson(json) )
         })
         done()
       })
   },
-  fetchReservation: function(id, done) {
-    $.getJSON('booking-api/' + id)
-      .success(function(json, status) {
-        var reservation = this._mergeReservation( this._newReservationFromJson(json) )
-        done(reservation)
-      }.bind(this))
+  retrieveReservations: function(ids) {
+    var resources = []
+    var self = this
+    _.each(ids, function(id) {
+      $.ajax({type: 'GET',
+              url:  'booking-api/' + id,
+              dataType: 'json',
+              async: false})
+        .success(function(json) {
+              resources.push( self._newReservationFromJson(json) )
+        })
+      })
+    return resources
   },
   saveReservation: function(reservation, afterSuccess, afterError) {
     if( reservation.conflict() ){
@@ -64,8 +74,8 @@ SMR.Store = {
       }.bind(this))
       .error(function(jqXHR, status, error) {
             var exception = JSON.parse(jqXHR.responseText)
-            afterError(exception.conflict)
-      })
+            this._handleConflict(exception, afterError)
+      }.bind(this))
   },
   updateReservation: function(reservation, next, afterError) {
     $.ajax({type: 'PUT',
@@ -79,8 +89,8 @@ SMR.Store = {
       }.bind(this))
       .error(function(jqXHR, status, error) {
             var exception = JSON.parse(jqXHR.responseText)
-            afterError(exception.conflict)
-      })
+            this._handleConflict(exception, afterError)
+      }.bind(this))
   },
   deleteReservation: function(reservation, next) {
     $.ajax({type: 'DELETE',
@@ -96,18 +106,12 @@ SMR.Store = {
   _newReservationFromJson: function(json) {
     return new SMR.Reservation().fromJSON(json)
   },
-  _findReservation: function(id, ifNone) {
-    var resa = _.find(this.reservations, function(res){ return res.id() == id })
-    if( resa == undefined ){
-      resa = ifNone()
-    }
-    return resa
+  _findReservation: function(id) {
+    return _.find(this.reservations, function(res){ return res.id() == id })
   },
-  _mergeReservation: function(resa) {
-    return this._findReservation(resa.id(), function() {
-      this.reservations.push(resa)
-      return resa
-    }.bind(this))
+  _handleConflict: function(conflict, afterError) {
+    var ids = _.map(conflict.resources, function(res){ return res.guid })
+    afterError(conflict.conflict, this.retrieveReservations(ids))
   },
 }
 
@@ -167,7 +171,7 @@ SMR.MainView = {
       var link = $('<a>', {href: '#'})
         .html(resa.renderDate())
         .click(function() {
-          SMR.getReservation(resa.id())
+          SMR.MainView.renderReservation(resa)
         })
       li.append(link).append(' ' + resa.renderTime(resa.startTime()) + ' - ' + resa.renderTime(resa.endTime()))
 
@@ -200,6 +204,14 @@ SMR.MainView = {
   },
   showException: function(exception) {
     $('#js-flash').html(exception)
+  },
+  mergeOverlapConflict: function(type, reservation, resources) {
+    this.showException(type)
+    console.log(resources)
+  },
+  mergeEditConflict: function(type, reservation, resources) {
+    this.showException(type)
+    console.log(resources)
   },
 }
 
