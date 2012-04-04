@@ -211,12 +211,12 @@ SMR.MainView = {
   },
   mergeEditConflict: function(type, reservation, resources) {
     this.showException(type)
-    console.log(resources)
+    SMR.MergeEditView.showConflict(reservation, resources[0])
   },
 }
 
 SMR.EditView = {
-  template: '<p>Date:<input id="date" type="text"><br>Time:<input id="time" type="text"><br>Duration:<input id="duration" type="number"><br><input id="save" value="Book" type="submit"></p>',
+  template: '<p>Date:<input id="date" type="text"><br>Time:<input id="time" type="text"><br>Duration:<input id="duration" type="number"><br><input id="save" value="Book" type="submit"><input id="cancel" value="Cancel" type="button"></p>',
   editReservation: function(reservation) {
     $('#js-reservation-detail').empty().append(this.template)
     var dateField = $('#date').val(reservation.startTime().toString("yyyy-MM-dd"))
@@ -230,7 +230,52 @@ SMR.EditView = {
         reservation.duration = durationField.val() * 60000
         SMR.saveReservation(reservation)
     })
+    $('#cancel').click(function() {
+      $('#js-reservation-detail').empty()
+      $('#js-flash').empty()
+    })
   },
+}
+
+SMR.MergeEditView = {
+  parent: function() {
+    return $('#js-reservation-detail')
+  },
+  resourceTemplate: function(resource) {
+    return '<p>Reservation has changed on server:<br>' + resource.render() + '<br><input id="accept" value="Accept" type="submit"></p>'
+  },
+  showRemoteResource: function(resource) {
+    this.parent().append(this.resourceTemplate(resource))
+    $('#accept').click(function() {
+      console.log('Accept')
+      // update local with remote
+    })
+  },
+  editTemplate: '<p>Date:<input id="date" type="text"><br>Time:<input id="time" type="text"><br>Duration:<input id="duration" type="number"><br><input id="overwrite" value="Overwrite" type="submit"><input id="cancel" value="Cancel" type="button"></p>',
+  editReservation: function(reservation) {
+    this.parent().append(this.editTemplate)
+    var dateField = $('#date').val(reservation.startTime().toString("yyyy-MM-dd"))
+    var timeField = $('#time').val(reservation.startTime().toString("HH:mm"))
+    var durationField = $('#duration').val(reservation.duration / 60000)
+    $('#overwrite')
+      .click(function(){
+        $('#js-flash').empty()
+        reservation.datetime = Date.parse(dateField.val() + ' ' + timeField.val())
+        reservation.duration = durationField.val() * 60000
+        console.log('Overwrite')
+        // update timestamp before saving
+        // SMR.saveReservation(reservation)
+    })
+    $('#cancel').click(function() {
+      $('#js-reservation-detail').empty()
+      $('#js-flash').empty()
+    })
+  },
+  showConflict: function(reservation, resource) {
+    this.parent().empty()
+    this.showRemoteResource(resource)
+    this.editReservation(reservation)
+  }
 }
 
 $(document).ready(function(){
