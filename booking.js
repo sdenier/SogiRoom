@@ -19,8 +19,14 @@ SMR = {
       })
   },
   deleteReservation: function(reservation) {
-    $('#js-reservation-detail').empty()
+    SMR.MainView.hideDetail()
     SMR.Store.deleteReservation(reservation, SMR.MainView.renderReservations)
+  },
+  acceptReservation: function(reservation) {
+    SMR.Store.mergeReservation(reservation)
+    SMR.MainView.hideDetail()
+    $('#js-flash').empty()
+    SMR.MainView.renderReservations()
   },
 }
 
@@ -84,7 +90,7 @@ SMR.Store = {
             dataType: 'json' })
       .success(function(jsonSig, status) {
             reservation.timestamp = jsonSig.timestamp
-            _.extend(this._findReservation(reservation.id()), reservation)
+            this.mergeReservation(reservation)
             next()
       }.bind(this))
       .error(function(jqXHR, status, error) {
@@ -102,6 +108,9 @@ SMR.Store = {
           this.reservations.splice(i, 1)
           next()
         }.bind(this))
+  },
+  mergeReservation: function(reservation) {
+    _.extend(this._findReservation(reservation.id()), reservation)
   },
   _newReservationFromJson: function(json) {
     return new SMR.Reservation().fromJSON(json)
@@ -247,8 +256,7 @@ SMR.MergeEditView = {
   showRemoteResource: function(resource) {
     this.parent().append(this.resourceTemplate(resource))
     $('#accept').click(function() {
-      console.log('Accept')
-      // update local with remote
+      SMR.acceptReservation(resource)
     })
   },
   editTemplate: '<p>Date:<input id="date" type="text"><br>Time:<input id="time" type="text"><br>Duration:<input id="duration" type="number"><br><input id="overwrite" value="Overwrite" type="submit"><input id="cancel" value="Cancel" type="button"></p>',
