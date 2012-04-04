@@ -28,6 +28,10 @@ SMR = {
     $('#js-flash').empty()
     SMR.MainView.renderReservations()
   },
+  overwriteReservation: function(reservation, resource) {
+    reservation.timestamp = resource.timestamp // up to current version
+    this.saveReservation(reservation)
+  },
 }
 
 SMR.Store = {
@@ -260,7 +264,7 @@ SMR.MergeEditView = {
     })
   },
   editTemplate: '<p>Date:<input id="date" type="text"><br>Time:<input id="time" type="text"><br>Duration:<input id="duration" type="number"><br><input id="overwrite" value="Overwrite" type="submit"><input id="cancel" value="Cancel" type="button"></p>',
-  editReservation: function(reservation) {
+  editReservation: function(reservation, resource) {
     this.parent().append(this.editTemplate)
     var dateField = $('#date').val(reservation.startTime().toString("yyyy-MM-dd"))
     var timeField = $('#time').val(reservation.startTime().toString("HH:mm"))
@@ -270,9 +274,7 @@ SMR.MergeEditView = {
         $('#js-flash').empty()
         reservation.datetime = Date.parse(dateField.val() + ' ' + timeField.val())
         reservation.duration = durationField.val() * 60000
-        console.log('Overwrite')
-        // update timestamp before saving
-        // SMR.saveReservation(reservation)
+        SMR.overwriteReservation(reservation, resource)
     })
     $('#cancel').click(function() {
       $('#js-reservation-detail').empty()
@@ -282,7 +284,7 @@ SMR.MergeEditView = {
   showConflict: function(reservation, resource) {
     this.parent().empty()
     this.showRemoteResource(resource)
-    this.editReservation(reservation)
+    this.editReservation(reservation, resource)
   }
 }
 
