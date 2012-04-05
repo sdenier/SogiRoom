@@ -1,5 +1,7 @@
 
 !SGLRoom methodsFor: 'resources'!
-deleteReservation: id
+deleteReservation: aReservation
 
-	^ reservations remove: (self findReservation: id)! !
+	reservations remove: aReservation.
+	tombstones add: aReservation.
+	^ aReservation! !

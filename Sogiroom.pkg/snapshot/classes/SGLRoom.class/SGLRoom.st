@@ -1,6 +1,6 @@
 
 Object subclass: #SGLRoom
-	instanceVariableNames: 'name reservations'
+	instanceVariableNames: 'name reservations tombstones'
 	classVariableNames: 'Default'
 	poolDictionaries: ''
 	category: 'SogiRoom-Models'!

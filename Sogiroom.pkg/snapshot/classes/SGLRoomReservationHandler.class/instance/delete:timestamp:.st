@@ -6,6 +6,5 @@ delete: id timestamp: timestamp
 	<consumes: '*/*'>
 
 	| deleted |
-	deleted := SGLRoom default deleteReservation: id asInteger.
-	deleted timestamp: SGLReservationService default nextTimestamp.
-	^ (deleted signature add: #state -> #deleted ; yourself) asJavascript! !
+	deleted := SGLReservationService default delete: id asInteger timestamp: timestamp asInteger.
+	^ deleted deletedSignature asJavascript! !

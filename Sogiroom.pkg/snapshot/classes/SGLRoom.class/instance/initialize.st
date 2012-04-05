@@ -2,4 +2,5 @@
 !SGLRoom methodsFor: 'initialize-release'!
 initialize
 
-	reservations := OrderedCollection new! !
+	reservations := OrderedCollection new.
+	tombstones := OrderedCollection new.! !
