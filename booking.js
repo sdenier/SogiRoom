@@ -12,6 +12,7 @@ SMR = {
         SMR.MainView.renderReservations()},
       function(type, resources){
         if( type == 'Overlap' ){
+          SMR.MainView.renderReservations()
           SMR.MainView.mergeOverlapConflict(type, reservation, resources)
         } else {
           SMR.MainView.mergeEditConflict(type, reservation, resources)
@@ -42,7 +43,7 @@ SMR.Store = {
     $.getJSON('booking-api')
       .success(function(data, status) {
         _.each(data, function(json) {
-          self.reservations.push( self._newReservationFromJson(json) )
+          self._addReservation( self._newReservationFromJson(json) )
         })
         done()
       })
@@ -79,7 +80,7 @@ SMR.Store = {
       .success(function(jsonSig) {
             reservation.guid = jsonSig.guid
             reservation.timestamp = jsonSig.timestamp
-            this.reservations.push(reservation)
+            this._addReservation(reservation)
             afterSuccess()
       }.bind(this))
       .error(function(jqXHR, status, error) {
@@ -114,17 +115,32 @@ SMR.Store = {
         }.bind(this))
   },
   mergeReservation: function(reservation) {
-    _.extend(this._findReservation(reservation.id()), reservation)
+    var resa = this._findReservation(reservation.id())
+    if( resa == undefined ) {
+      this._addReservation(reservation)
+    } else {
+      _.extend(resa, reservation)
+    }
   },
   _newReservationFromJson: function(json) {
     return new SMR.Reservation().fromJSON(json)
+  },
+  _addReservation: function(reservation) {
+    this.reservations.push(reservation)
   },
   _findReservation: function(id) {
     return _.find(this.reservations, function(res){ return res.id() == id })
   },
   _handleConflict: function(conflict, afterError) {
     var ids = _.map(conflict.resources, function(res){ return res.guid })
-    afterError(conflict.conflict, this.retrieveReservations(ids))
+    var remotes = this.retrieveReservations(ids)
+    var type = conflict.conflict
+    if( type == 'Overlap' ) {
+      _.each(remotes, function(res) {
+        this.mergeReservation(res)
+      }.bind(this))
+    }
+    afterError(type, remotes)
   },
 }
 
