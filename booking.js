@@ -236,7 +236,7 @@ SMR.MainView = {
   },
   mergeOverlapConflict: function(type, reservation, resources) {
     this.showException(type)
-    console.log(resources)
+    SMR.MergeOverlapView.showConflict(reservation, resources)
   },
   mergeEditConflict: function(type, reservation, resources) {
     this.showException(type)
@@ -301,6 +301,45 @@ SMR.MergeEditView = {
     this.parent().empty()
     this.showRemoteResource(resource)
     this.editReservation(reservation, resource)
+  }
+}
+
+SMR.MergeOverlapView = {
+  parent: function() {
+    return $('#js-reservation-detail')
+  },
+  resourceTemplate: function(resource) {
+    return '<br>' + resource.render()
+  },
+  showRemoteResources: function(resources) {
+    var dom = _.reduce(resources, function(dom, res){
+      return dom + this.resourceTemplate(res)
+    }.bind(this), "Conflicting reservations:")
+    this.parent().append("<p>" + dom + "</p>")
+  },
+  editTemplate: '<p>Date:<input id="date" type="text"><br>Time:<input id="time" type="text"><br>Duration:<input id="duration" type="number"><br><input id="update" value="Update" type="submit"><input id="cancel" value="Cancel" type="button"></p>',
+  editReservation: function(reservation) {
+    this.parent().append(this.editTemplate)
+    var dateField = $('#date').val(reservation.startTime().toString("yyyy-MM-dd"))
+    var timeField = $('#time').val(reservation.startTime().toString("HH:mm"))
+    var durationField = $('#duration').val(reservation.duration / 60000)
+    $('#update')
+      .val( reservation.isNew() ? 'Book' : 'Update' )
+      .click(function(){
+        $('#js-flash').empty()
+        reservation.datetime = Date.parse(dateField.val() + ' ' + timeField.val())
+        reservation.duration = durationField.val() * 60000
+        SMR.saveReservation(reservation)
+    })
+    $('#cancel').click(function() {
+      $('#js-reservation-detail').empty()
+      $('#js-flash').empty()
+    })
+  },
+  showConflict: function(reservation, resources) {
+    this.parent().empty()
+    this.showRemoteResources(resources)
+    this.editReservation(reservation)
   }
 }
 
