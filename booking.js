@@ -21,7 +21,10 @@ SMR = {
   },
   deleteReservation: function(reservation) {
     SMR.MainView.hideDetail()
-    SMR.Store.deleteReservation(reservation, SMR.MainView.renderReservations)
+    SMR.Store.deleteReservation(reservation,
+      SMR.MainView.renderReservations,
+      function(type, resources) {
+        SMR.MainView.mergeDeleteConflict(type, reservation, resources) })
   },
   acceptReservation: function(reservation) {
     SMR.Store.mergeReservation(reservation)
@@ -32,6 +35,10 @@ SMR = {
   overwriteReservation: function(reservation, resource) {
     reservation.timestamp = resource.timestamp // up to current version
     this.saveReservation(reservation)
+  },
+  forcedeleteReservation: function(reservation, resource) {
+    reservation.timestamp = resource.timestamp // up to current version
+    this.deleteReservation(reservation)
   },
 }
 
@@ -88,7 +95,7 @@ SMR.Store = {
             this._handleConflict(exception, afterError)
       }.bind(this))
   },
-  updateReservation: function(reservation, next, afterError) {
+  updateReservation: function(reservation, afterSuccess, afterError) {
     $.ajax({type: 'PUT',
             url: 'booking-api/' + reservation.id(),
             data: JSON.stringify(reservation),
@@ -96,14 +103,14 @@ SMR.Store = {
       .success(function(jsonSig, status) {
             reservation.timestamp = jsonSig.timestamp
             this.mergeReservation(reservation)
-            next()
+            afterSuccess()
       }.bind(this))
       .error(function(jqXHR, status, error) {
             var exception = JSON.parse(jqXHR.responseText)
             this._handleConflict(exception, afterError)
       }.bind(this))
   },
-  deleteReservation: function(reservation, next) {
+  deleteReservation: function(reservation, afterSuccess, afterError) {
     $.ajax({type: 'DELETE',
         url: 'booking-api/' + reservation.id() + '/' + reservation.timestamp,
         dataType: 'json' })
@@ -111,7 +118,11 @@ SMR.Store = {
           reservation.timestamp = jsonSig.timestamp
           var i = this.reservations.indexOf(reservation)
           this.reservations.splice(i, 1)
-          next()
+          afterSuccess()
+        }.bind(this))
+        .error(function(jqXHR, status, error) {
+              var exception = JSON.parse(jqXHR.responseText)
+              this._handleConflict(exception, afterError)
         }.bind(this))
   },
   mergeReservation: function(reservation) {
@@ -242,6 +253,10 @@ SMR.MainView = {
     this.showException(type)
     SMR.MergeEditView.showConflict(reservation, resources[0])
   },
+  mergeDeleteConflict: function(type, reservation, resources) {
+    this.showException(type)
+    SMR.MergeDeleteView.showConflict(reservation, resources[0])
+  },
 }
 
 SMR.EditView = {
@@ -340,6 +355,30 @@ SMR.MergeOverlapView = {
     this.parent().empty()
     this.showRemoteResources(resources)
     this.editReservation(reservation)
+  }
+}
+
+SMR.MergeDeleteView = {
+  parent: function() {
+    return $('#js-reservation-detail')
+  },
+  resourceTemplate: function(resource) {
+    return '<p>Reservation has changed on server:<br>' + resource.render() + '<br><input id="accept" value="Accept" type="submit"><input id="forcedelete" value="Force delete" type="submit"><input id="cancel" value="Cancel" type="submit"></p>'
+  },
+  showConflict: function(reservation, resource) {
+    this.parent().empty().append(this.resourceTemplate(resource))
+    $('#accept').click(function() {
+      SMR.acceptReservation(resource)
+    })
+    $('#cancel').click(function() {
+      $('#js-reservation-detail').empty()
+      $('#js-flash').empty()
+    })
+    $('#forcedelete')
+      .click(function(){
+        $('#js-flash').empty()
+        SMR.forcedeleteReservation(reservation, resource)
+    })
   }
 }
 

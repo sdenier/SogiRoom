@@ -5,6 +5,9 @@ delete: id timestamp: timestamp
 	<produces: 'text/json'>
 	<consumes: '*/*'>
 
-	| deleted |
-	deleted := SGLReservationService default delete: id asInteger timestamp: timestamp asInteger.
-	^ deleted deletedSignature asJavascript! !
+	[	| deleted |
+		deleted := SGLReservationService default delete: id asInteger timestamp: timestamp asInteger.
+		^ deleted deletedSignature asJavascript ]
+	
+	on: SGLConflict
+	do: [ :conflict | self handleConflict: conflict ]! !
