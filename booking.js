@@ -300,12 +300,11 @@ SMR.MergeEditView = {
     var dateField = $('#date').val(reservation.startTime().toString("yyyy-MM-dd"))
     var timeField = $('#time').val(reservation.startTime().toString("HH:mm"))
     var durationField = $('#duration').val(reservation.duration / 60000)
-    $('#overwrite')
-      .click(function(){
-        $('#js-flash').empty()
-        reservation.datetime = Date.parse(dateField.val() + ' ' + timeField.val())
-        reservation.duration = durationField.val() * 60000
-        SMR.overwriteReservation(reservation, resource)
+    $('#overwrite').click(function(){
+      $('#js-flash').empty()
+      reservation.datetime = Date.parse(dateField.val() + ' ' + timeField.val())
+      reservation.duration = durationField.val() * 60000
+      SMR.overwriteReservation(reservation, resource)
     })
     $('#cancel').click(function() {
       $('#js-reservation-detail').empty()
@@ -370,14 +369,13 @@ SMR.MergeDeleteView = {
     $('#accept').click(function() {
       SMR.acceptReservation(resource)
     })
+    $('#forcedelete').click(function(){
+      $('#js-flash').empty()
+      SMR.forcedeleteReservation(reservation, resource)
+    })
     $('#cancel').click(function() {
       $('#js-reservation-detail').empty()
       $('#js-flash').empty()
-    })
-    $('#forcedelete')
-      .click(function(){
-        $('#js-flash').empty()
-        SMR.forcedeleteReservation(reservation, resource)
     })
   }
 }
