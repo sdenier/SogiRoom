@@ -11,11 +11,17 @@ SMR = {
         SMR.MainView.hideDetail()
         SMR.MainView.renderReservations()},
       function(type, resources){
-        if( type == 'Overlap' ){
-          SMR.MainView.renderReservations()
-          SMR.MainView.mergeOverlapConflict(type, reservation, resources)
-        } else {
-          SMR.MainView.mergeEditConflict(type, reservation, resources)
+        switch(type) {
+          case 'Overlap':
+            SMR.MainView.renderReservations()
+            SMR.MainView.mergeOverlapConflict(type, reservation, resources)
+            break
+          case 'Concurrent Edit':
+            SMR.MainView.mergeEditConflict(type, reservation, resources)
+            break
+          case 'Deleted':
+            SMR.MainView.mergeRestoreConflict(type, reservation, resources)
+            break
         }
       })
   },
@@ -39,6 +45,17 @@ SMR = {
   forcedeleteReservation: function(reservation, resource) {
     reservation.timestamp = resource.timestamp // up to current version
     this.deleteReservation(reservation)
+  },
+  deletedReservation: function(reservation, signature) {
+    reservation.timestamp = signature.timestamp
+    SMR.Store.removeReservation(reservation.id())
+    SMR.MainView.hideDetail()
+    SMR.MainView.renderReservations()
+  },
+  recreateReservation: function(reservation, signature) {
+    SMR.Store.removeReservation(reservation.id())
+    reservation.resetNew()
+    this.saveReservation(reservation)
   },
 }
 
@@ -116,8 +133,7 @@ SMR.Store = {
         dataType: 'json' })
         .success(function(jsonSig, status) {
           reservation.timestamp = jsonSig.timestamp
-          var i = this.reservations.indexOf(reservation)
-          this.reservations.splice(i, 1)
+          this.removeReservation(reservation.id())
           afterSuccess()
         }.bind(this))
         .error(function(jqXHR, status, error) {
@@ -133,6 +149,10 @@ SMR.Store = {
       _.extend(resa, reservation)
     }
   },
+  removeReservation: function(id) {
+    var i = this.reservations.indexOf(this._findReservation(id))
+    this.reservations.splice(i, 1)
+  },
   _newReservationFromJson: function(json) {
     return new SMR.Reservation().fromJSON(json)
   },
@@ -143,13 +163,16 @@ SMR.Store = {
     return _.find(this.reservations, function(res){ return res.id() == id })
   },
   _handleConflict: function(conflict, afterError) {
-    var ids = _.map(conflict.resources, function(res){ return res.guid })
-    var remotes = this.retrieveReservations(ids)
     var type = conflict.conflict
-    if( type == 'Overlap' ) {
-      _.each(remotes, function(res) {
-        this.mergeReservation(res)
-      }.bind(this))
+    var remotes = conflict.resources
+    if( type != 'Deleted' ) {
+      var ids = _.map(remotes, function(res){ return res.guid })
+      remotes = this.retrieveReservations(ids)
+      if( type == 'Overlap' ) {
+        _.each(remotes, function(res) {
+          this.mergeReservation(res)
+        }.bind(this))
+      }
     }
     afterError(type, remotes)
   },
@@ -173,6 +196,9 @@ $.extend(SMR.Reservation.prototype, {
   },
   isNew: function() {
     return this.guid === undefined
+  },
+  resetNew: function() {
+    this.guid = undefined
   },
   startTime: function() {
     return this.datetime
@@ -252,6 +278,10 @@ SMR.MainView = {
   mergeEditConflict: function(type, reservation, resources) {
     this.showException(type)
     SMR.MergeEditView.showConflict(reservation, resources[0])
+  },
+  mergeRestoreConflict: function(type, reservation, resources) {
+    this.showException(type)
+    SMR.MergeRestoreView.showConflict(reservation, resources[0])
   },
   mergeDeleteConflict: function(type, reservation, resources) {
     this.showException(type)
@@ -354,6 +384,30 @@ SMR.MergeOverlapView = {
     this.parent().empty()
     this.showRemoteResources(resources)
     this.editReservation(reservation)
+  }
+}
+
+SMR.MergeRestoreView = {
+  parent: function() {
+    return $('#js-reservation-detail')
+  },
+  resourceTemplate: function(resource) {
+    return '<p>Reservation has been deleted on server:<br>' + resource.render() + '<br><input id="recreate" value="Recreate" type="submit"><input id="delete" value="Delete" type="submit"><input id="cancel" value="Cancel" type="submit"></p>'
+  },
+  showConflict: function(reservation, signature) {
+    this.parent().empty().append(this.resourceTemplate(reservation))
+    $('#recreate').click(function() {
+      $('#js-flash').empty()
+      SMR.recreateReservation(reservation, signature)
+    })
+    $('#delete').click(function(){
+      $('#js-flash').empty()
+      SMR.deletedReservation(reservation, signature)
+    })
+    $('#cancel').click(function() {
+      $('#js-reservation-detail').empty()
+      $('#js-flash').empty()
+    })
   }
 }
 

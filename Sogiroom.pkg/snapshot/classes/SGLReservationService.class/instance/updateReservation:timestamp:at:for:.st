@@ -3,7 +3,9 @@
 updateReservation: guid timestamp: ts at: dateTime for: duration
 
 	| resa newResa |
-	resa := SGLRoom default findReservation: guid.
+	resa := SGLRoom default
+				findReservation: guid
+				ifDeleted: [:deleted | SGLConflict signal: 'Deleted' withResources: { deleted signature }].
 	newResa := SGLReservation forId: guid date: dateTime asDate at: dateTime asTime for: duration.
 
 	resa = newResa ifTrue: [ ^ resa ]. "semantic equivalence, do nothing and return last object, even if there was a concurrent edit"
